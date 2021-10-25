@@ -4,100 +4,81 @@
 
 class LED_Array {
 public:
-  // requires: numLEDs <= 300 
-  void init(int numLEDs) {
+
+  // REQUIRES: numLEDsIn <= 300 
+  void init(int numLEDsIn) {
+    numLEDs = numLEDsIn;
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(LEDs, numLEDs);
-    currentBrightness = 80;
+
+    setRGBColor(10, 10, 10);
   }
 
-  void off(){
-    FastLED.setBrightness(0);
+  // delayIn (ms) affects how quickly the display fades to black
+  void fadeToBlack(int delayIn){
+    int itrs = 20;
+    while (itrs > 0) {
+      // half the brightness of all LEDs until dark
+      fadeToBlackBy(LEDs, numLEDs, 127);
+      FastLED.show();
+      delay(delayIn);
+      --itrs;
+    }
   }
   
-  // hue , saturation, brightness
-  // requires: 0 <= h, s, v <= 255
-  void setHSVColor(int hue, int saturation, int brightness) {
-    FastLED.showColor(CHSV(hue,saturation,brightness));
-    currentBrightness = brightness;
+  // REQUIRES: 0 <= h, s, v <= 255
+  void setHSVColor(int h, int s, int v) {
+    FastLED.showColor(CHSV(h,s,v));
   }
 
+  // REQUIRES: 0 <= r, g, b <= 255
   // note: the strip uses GRB by default but CRGB() handles the conversion
-  // requires: 0 <= r, g, b <= 255
   void setRGBColor(int r, int g, int b) {
-    FastLED.showColor(CRGB(r,g,b));
+    for (int i = 0; i < numLEDs; ++i) {
+      LEDs[i] = CRGB(r,g,b);
+    }
+    FastLED.show();
   }
     
-  // requires: 0 <= brightness <= 255
-  void setBrightness(int b) {
-    FastLED.setBrightness(b);
-    currentBrightness = b;
-//    FastLED.show();
+  // REQUIRES: 0 <= r1, g1, b1, r2, g2, b2 <= 255
+  // delayIn (ms) affects the smoothness of color transition
+  void colorTransition(int r1, int g1, int b1, int r2, int g2, int b2, int delayIn) {
+    for (int percent = 0; percent <= 255; percent += 5) {
+      for (int i = 0; i < numLEDs; ++i) {
+        LEDs[i] = blend(CRGB(r1, g1, b1), CRGB(r2, g2, b2), percent);
+      }
+    FastLED.show();
+    delay(delayIn);
+    }
   }
 
-  // passes in a vector of r,g,b values and 
-  // the time is the amount of time between the r,g,b value set
-  // requires: 0 <= r, g, b <= 255
-  void createColorCycle(int startColorVal[], int endColorVal[], int time);
-
-  // passes in a vector of brightness values and 
-  // the time is the amount of time between the r,g,b value set
-  // requires: 0 <= brightness <= 255
-    void changeBrightness(int brightnessValues[], int arrSize, int delayIn) {
-      /* not functional - needs debugging
-      for (int idx = 0; idx < arrSize; ++idx){
-        int nextVal = brightnessValues[idx];
-        int bDiff = currentBrightness - nextVal;
-        int delayOut, bIncr;
-
-        if (abs(bDiff) < delayIn) {
-          delayOut = delayIn / bDiff;
-          bIncr = bDiff / abs(bDiff); // maintain sign
-        }
-        else {
-          delayOut = 1;
-          bIncr = bDiff / delayIn;
-        }
-          
-        for (int ms = 0; ms < delayIn; ms += delayOut) {
-          if (bIncr > 0 && currentBrightness >= nextVal
-              || bIncr < 0 && currentBrightness <= nextVal){
-            break;
-          }
-          currentBrightness += bIncr;
-          setBrightness(currentBrightness);
-          
-          delay(delayOut);
-        }
-      }
-      */
-    }
+  // REQUIRES: 0 <= r, g, b <= 255
+  // delayIn (ms) affects how long the end color val remains visible
+  void createColorCycle(int startColorVal[], int endColorVal[], int delayIn) {
+    colorTransition(startColorVal[0], startColorVal[1], startColorVal[2], 
+                endColorVal[0], endColorVal[0], endColorVal[0], 60);
+    delay(delayIn);
+    colorTransition(endColorVal[0], endColorVal[0], endColorVal[0], 
+                startColorVal[0], startColorVal[1], startColorVal[2], 60);
+  }
 
 
  private:
   CRGB LEDs[300];
   int currentBrightness;
+  int numLEDs;
 };
 
 
 LED_Array arr;
 
 void setup() {
- arr.init(10);
- arr.setRGBColor(10,20, 20);
+ arr.init(15);
 }
 
 void loop() {
-  // Blinking between blue and red 
-//  arr.setBrightness(150);
-//  arr.setRGBColor(10,20, 20);
-//  delay(200);
-//  arr.setBrightness(20);
-//  arr.setRGBColor(200,20, 20);
-//  delay(200);
 
-// Gradual color change test
-  for (int i = 0; i < 40; ++i) {
-    arr.setHSVColor(i*4, 150, 100-i);
-    delay(300);
-  }
+arr.colorTransition(200, 20, 20, 0, 0, 60, 100);
+arr.colorTransition(0, 0, 60, 200, 20, 20, 50);
+
+delay(1000);
 }
