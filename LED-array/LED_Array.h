@@ -1,6 +1,7 @@
 #include <FastLED.h>
 
-#define DATA_PIN 6
+#define DATA_PIN 6 // for Arduino
+// #define DATA_PIN 22 // for ESP32
 
 class LED_Array {
 public:
@@ -51,28 +52,29 @@ public:
   // REQUIRES: 0 <= r1, g1, b1, r2, g2, b2 <= 255
   // delayIn (ms) affects the smoothness of color transition
   void colorTransition(CRGB color1, CRGB color2, int delayIn) {
+    int itrDelay = delayIn/(255/5);
     for (int percent = 0; percent <= 255; percent += 5) {
       for (int i = 0; i < numLEDs; ++i) {
         LEDs[i] = blend(color1, color2, percent);
       }
     FastLED.show();
-    delay(delayIn);
+    delay(itrDelay);
     }
   }
 
   // REQUIRES: 0 <= r, g, b <= 255
   // delayIn (ms) affects how long the end color val remains visible
   void createColorCycle(int startColorVal[], int endColorVal[], int delayIn) {
+    int transitionDelay = 2000; // 2 seconds
     colorTransition(startColorVal[0], startColorVal[1], startColorVal[2], 
-                endColorVal[0], endColorVal[0], endColorVal[0], 60);
+                endColorVal[0], endColorVal[1], endColorVal[2], transitionDelay);
     delay(delayIn);
-    colorTransition(endColorVal[0], endColorVal[0], endColorVal[0], 
-                startColorVal[0], startColorVal[1], startColorVal[2], 60);
+    colorTransition(endColorVal[0], endColorVal[1], endColorVal[2], 
+                startColorVal[0], startColorVal[1], startColorVal[2], transitionDelay);
   }
 
 
  private:
   CRGB LEDs[300];
-  int currentBrightness;
   int numLEDs;
 };
